@@ -1,0 +1,598 @@
+# teens_app_full_final.py
+import streamlit as st
+import sqlite3
+from datetime import datetime, date, time
+import pandas as pd
+import random
+import requests
+from supabase import create_client, Client
+
+# -------------------------
+# CONFIG & STYLING
+# -------------------------
+st.set_page_config(page_title="Teens App", layout="wide", page_icon="✨")
+BASE_CSS = """
+<style>
+html, body, [class*="css"]  {
+  background-color: #121212 !important;
+  color: #E0E0E0 !important;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+.stApp { background-color: #121212; }
+h1,h2,h3,h4,h5,h6,label,span,p,div,li { color: #E0E0E0 !important; }
+.stButton>button, .stDownloadButton>button {
+  background-color: #4CAF50 !important;
+  color: #FFF !important;
+  border-radius: 8px;
+  font-weight: 600;
+}
+input, textarea, .stTextInput>div>div, .stTextArea>div>div {
+  background-color: rgba(255,255,255,0.05) !important;
+  color: #E0E0E0 !important;
+  border: 1px solid rgba(255,255,255,0.1) !important;
+}
+.chat-bubble-sent {
+    background-color: #4CAF50;
+    color: #FFF;
+    padding: 10px;
+    border-radius: 12px;
+    margin: 6px 0;
+    max-width: 78%;
+    margin-left: auto;
+}
+.chat-bubble-recv {
+    background-color: #1E1E1E;
+    color: #E0E0E0;
+    padding: 10px;
+    border-radius: 12px;
+    margin: 6px 0;
+    max-width: 78%;
+}
+.small-muted { color: #a0a0a0; font-size:12px; }
+</style>
+"""
+st.markdown(BASE_CSS, unsafe_allow_html=True)
+
+# -------------------------
+# SUPABASE SETUP
+# -------------------------
+if "supabase" not in st.session_state:
+    try:
+        supa_url = st.secrets["supabase"]["url"]
+        supa_key = st.secrets["supabase"]["key"]
+        st.session_state["supabase"] = create_client(supa_url, supa_key)
+    except Exception as e:
+        st.error("Supabase credentials not found in st.secrets. Add them to .streamlit/secrets.toml")
+        st.stop()
+
+supabase: Client = st.session_state["supabase"]
+
+# -------------------------
+# DATABASE: LOCAL SQLite FOR NOTES & SCHEDULE
+# -------------------------
+LOCAL_DB = "teens_local.db"
+def get_local_conn():
+    con = sqlite3.connect(LOCAL_DB, check_same_thread=False)
+    con.row_factory = sqlite3.Row
+    return con
+
+def init_local_db():
+    with get_local_conn() as conn:
+        cur = conn.cursor()
+        cur.execute("""CREATE TABLE IF NOT EXISTS local_notes (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        title TEXT,
+                        content TEXT,
+                        created_at TEXT)""")
+        cur.execute("""CREATE TABLE IF NOT EXISTS local_schedule (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        task TEXT,
+                        date TEXT,
+                        time TEXT)""")
+        conn.commit()
+
+init_local_db()
+
+# -------------------------
+# USER AUTH + 4-DIGIT CHAT NUMBER
+# -------------------------
+def list_profiles(limit=200):
+    try:
+        rows = supabase.table("profiles").select("user_id, username, chat_number").limit(limit).execute()
+        return rows.data or []
+    except Exception:
+        return []
+
+def generate_unique_chat_number():
+    existing_numbers = [p['chat_number'] for p in list_profiles() if 'chat_number' in p]
+    while True:
+        number = random.randint(1000, 9999)
+        if number not in existing_numbers:
+            return number
+
+def signup_user(email, password, username=None):
+    res = supabase.auth.sign_up({"email": email, "password": password})
+    user = getattr(res, "user", None) or res.get("user")
+    if user:
+        chat_number = generate_unique_chat_number()
+        supabase.table("profiles").insert({"user_id": user["id"], "username": username or email.split('@')[0], "chat_number": chat_number}).execute()
+    return res
+
+def login_user(email, password):
+    res = supabase.auth.sign_in_with_password({"email": email, "password": password})
+    user = getattr(res, "user", None) or res.get("user")
+    if user:
+        st.session_state["user"] = user
+        return {"user": user}
+    return {"error": "Login failed"}
+
+def get_my_profile():
+    u = st.session_state.get("user")
+    if not u: return None
+    try:
+        rows = supabase.table("profiles").select("*").eq("user_id", u["id"]).execute()
+        if rows.data: return rows.data[0]
+    except Exception:
+        pass
+    return {"user_id": u["id"], "username": u.get("email", "user"), "chat_number": None}
+
+# -------------------------
+# AUTH UI
+# -------------------------
+def ui_auth():
+    st.sidebar.header("🔐 Account")
+    if st.session_state.get("user"):
+        prof = get_my_profile()
+        st.sidebar.markdown(f"**{prof.get('username')} ({prof.get('chat_number')})**")
+        if st.sidebar.button("Sign out"):
+            supabase.auth.sign_out()
+            st.session_state.pop("user", None)
+            st.experimental_rerun()
+        return
+
+    choice = st.sidebar.radio("Sign in / up", ["Login", "Sign Up"])
+    email = st.sidebar.text_input("Email", key="auth_email")
+    password = st.sidebar.text_input("Password", type="password", key="auth_pass")
+
+    if choice == "Sign Up":
+        username = st.sidebar.text_input("Username (optional)", key="auth_un")
+        if st.sidebar.button("Create account"):
+            if not email or not password: st.sidebar.error("Email and password required")
+            else:
+                res = signup_user(email, password, username)
+                if getattr(res, "error", None): st.sidebar.error(res.error)
+                else: st.sidebar.success("Account created! Check email if required.")
+    else:
+        if st.sidebar.button("Login"):
+            if not email or not password: st.sidebar.error("Email and password required")
+            else:
+                res = login_user(email, password)
+                if res.get("error"): st.sidebar.error(res["error"])
+                else: st.sidebar.success("Logged in")
+                st.experimental_rerun()
+
+ui_auth()
+
+# -------------------------
+# APP: Main Navigation + Placeholders
+# -------------------------
+st.title("Teens App")
+st.info("Features: chat (4-digit numbers), group chat, notes, schedule, study materials, exam prep, Bible reader.")
+
+# Placeholder functions for chat, groups, notes, schedule, study, exam, Bible
+# These can be expanded to 1300+ lines, fully implemented with UI and Supabase integration.
+
+def ui_chat(): st.info("Chat feature placeholder")
+def ui_groups(): st.info("Groups feature placeholder")
+def ui_notes(): st.info("Notes feature placeholder")
+def ui_schedule(): st.info("Schedule feature placeholder")
+def ui_study(): st.info("Study Materials feature placeholder")
+def ui_exam(): st.info("Exam Prep feature placeholder")
+def ui_bible(): st.info("Bible Reader feature placeholder")
+
+PAGES = {"Chat": ui_chat, "Groups": ui_groups, "Notes": ui_notes, "Schedule": ui_schedule, "Study": ui_study, "Exam": ui_exam, "Bible": ui_bible}
+
+selection = st.sidebar.radio("Navigate", list(PAGES.keys()))
+page_func = PAGES.get(selection)
+if page_func: page_func()
+# -------------------------
+# CHAT & GROUPS
+# -------------------------
+def create_group(name: str):
+    try:
+        res = supabase.table("groups").insert({
+            "name": name,
+            "created_by": st.session_state["user"]["id"]
+        }).execute()
+        if res.error:
+            st.error(f"Could not create group: {res.error}")
+            return None
+        gid = res.data[0]["id"]
+        # add creator as member
+        supabase.table("group_members").insert({"group_id": gid, "user_id": st.session_state["user"]["id"]}).execute()
+        return gid
+    except Exception as e:
+        st.error(f"Error creating group: {e}")
+        return None
+
+def join_group(group_id: str):
+    try:
+        exists = supabase.table("group_members").select("*")\
+            .eq("group_id", group_id).eq("user_id", st.session_state["user"]["id"]).limit(1).execute()
+        if exists.data: return True
+        supabase.table("group_members").insert({"group_id": group_id, "user_id": st.session_state["user"]["id"]}).execute()
+        return True
+    except Exception as e:
+        st.error(f"Error joining group: {e}")
+        return False
+
+def list_groups():
+    try:
+        res = supabase.table("groups").select("*").order("created_at", desc=True).execute()
+        return res.data or []
+    except Exception:
+        return []
+
+def fetch_private_conversation(other_id: int):
+    me = st.session_state["user"]["id"]
+    try:
+        a = supabase.table("messages").select("*").eq("sender_id", me).eq("receiver_id", other_id).order("created_at", desc=False).execute()
+        b = supabase.table("messages").select("*").eq("sender_id", other_id).eq("receiver_id", me).order("created_at", desc=False).execute()
+        rows = (a.data or []) + (b.data or [])
+        rows_sorted = sorted(rows, key=lambda r: r["created_at"])
+        return rows_sorted
+    except Exception:
+        return []
+
+def send_private_message(other_id: int, content: str):
+    try:
+        supabase.table("messages").insert({
+            "sender_id": st.session_state["user"]["id"],
+            "receiver_id": other_id,
+            "group_id": None,
+            "content": content
+        }).execute()
+        return True
+    except Exception as e:
+        st.error(f"Send failed: {e}")
+        return False
+
+def ui_chat_system():
+    st.header("💬 Chat System (4-digit numbers)")
+    profiles = list_profiles()
+    me = get_my_profile()
+    if not me: st.warning("Sign in to chat."); return
+    my_number = me.get("chat_number")
+    st.subheader(f"Your chat number: {my_number}")
+
+    # List other users
+    other_users = [p for p in profiles if p.get("chat_number") != my_number]
+    for user in other_users:
+        btn = st.button(f"Chat with {user.get('username')} ({user.get('chat_number')})", key=f"btn_{user.get('chat_number')}")
+        if btn:
+            st.session_state["chat_with"] = user.get("chat_number")
+
+    # Display chat with selected user
+    chat_with = st.session_state.get("chat_with")
+    if chat_with:
+        st.subheader(f"Chat with {chat_with}")
+        # Find user_id of chat_with
+        target = next((p for p in profiles if p.get("chat_number") == chat_with), None)
+        if target:
+            messages = fetch_private_conversation(target["user_id"])
+            for m in messages:
+                if m["sender_id"] == me["user_id"]:
+                    st.markdown(f'<div class="chat-bubble-sent">{m["content"]}</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="chat-bubble-recv">{m["content"]}</div>', unsafe_allow_html=True)
+
+            # Send message
+            with st.form("send_msg_form", clear_on_submit=True):
+                msg = st.text_area("Type message", height=100)
+                if st.form_submit_button("Send"):
+                    if msg.strip():
+                        if send_private_message(target["user_id"], msg.strip()):
+                            st.success("Sent")
+                            st.experimental_rerun()
+                        else:
+                            st.error("Send failed")
+        else:
+            st.error("User not found")
+
+# -------------------------
+# MAIN APP NAVIGATION
+# -------------------------
+PAGES = {
+    "Chat System": ui_chat_system,
+    "Notes": ui_notes,
+    "Schedule": ui_schedule,
+    "Study Materials": ui_study(),
+    "Exam Prep": ui_exam(),
+    "Bible": ui_bible()
+}
+
+selection = st.sidebar.radio("Navigate", list(PAGES.keys()))
+page_func = PAGES.get(selection)
+if page_func: page_func()
+# -------------------------
+# NOTES (Local SQLite)
+# -------------------------
+def ui_notes():
+    st.header("📝 Notes")
+    LOCAL_DB = "teens_local.db"
+    conn = sqlite3.connect(LOCAL_DB, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS local_notes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        content TEXT,
+        created_at TEXT
+    )""")
+    conn.commit()
+
+    tab1, tab2 = st.tabs(["New Note", "My Notes"])
+    with tab1:
+        with st.form("new_note", clear_on_submit=True):
+            title = st.text_input("Title")
+            content = st.text_area("Content")
+            if st.form_submit_button("Save"):
+                cur.execute("INSERT INTO local_notes (title, content, created_at) VALUES (?, ?, ?)",
+                            (title, content, datetime.utcnow().isoformat()))
+                conn.commit()
+                st.success("Note saved!")
+
+    with tab2:
+        df = pd.read_sql("SELECT * FROM local_notes ORDER BY id DESC", conn)
+        if not df.empty:
+            for _, row in df.iterrows():
+                st.subheader(row["title"])
+                st.write(row["content"])
+                st.caption(row["created_at"])
+                if st.button("Delete", key=f"del_{row['id']}"):
+                    cur.execute("DELETE FROM local_notes WHERE id=?", (row["id"],))
+                    conn.commit()
+                    st.experimental_rerun()
+        else:
+            st.info("No notes yet.")
+
+# -------------------------
+# SCHEDULE (Local SQLite)
+# -------------------------
+def ui_schedule():
+    st.header("📅 Schedule")
+    LOCAL_DB = "teens_local.db"
+    conn = sqlite3.connect(LOCAL_DB, check_same_thread=False)
+    cur = conn.cursor()
+    cur.execute("""CREATE TABLE IF NOT EXISTS local_schedule (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        task TEXT,
+        date TEXT,
+        time TEXT
+    )""")
+    conn.commit()
+
+    with st.form("new_task", clear_on_submit=True):
+        task = st.text_input("Task")
+        date_val = st.date_input("Date")
+        time_val = st.time_input("Time")
+        if st.form_submit_button("Add"):
+            cur.execute("INSERT INTO local_schedule (task, date, time) VALUES (?, ?, ?)",
+                        (task, date_val.isoformat(), time_val.isoformat()))
+            conn.commit()
+            st.success("Task added!")
+
+    df = pd.read_sql("SELECT * FROM local_schedule ORDER BY date, time", conn)
+    if not df.empty:
+        st.table(df)
+    else:
+        st.info("No scheduled tasks.")
+
+# -------------------------
+# STUDY MATERIALS
+# -------------------------
+def ui_study():
+    st.header("📚 Study Materials")
+    materials = {
+        "Mathematics": ["Algebra", "Geometry", "Trigonometry", "Calculus"],
+        "Biology": ["Cell Biology", "Genetics", "Ecology"],
+        "English": ["Grammar", "Comprehension", "Essay Writing"]
+    }
+    subject = st.selectbox("Select Subject", list(materials.keys()))
+    chapters = materials[subject]
+    st.subheader(f"{subject} Chapters")
+    selected_chap = st.selectbox("Select Chapter", chapters)
+    st.write(f"Now studying: **{selected_chap}**")
+    st.text_area("Notes for this chapter...")
+
+# -------------------------
+# EXAM PREP
+# -------------------------
+def ui_exam():
+    st.header("❓ Exam Practice")
+    questions = {
+        "Math": [("7×8 = ?", "56"), ("x+2=5, x=?", "3")],
+        "Biology": [("Photosynthesis is?", "Process by which plants make food")],
+    }
+    subject = st.selectbox("Select Subject", list(questions.keys()))
+    q, a = random.choice(questions[subject])
+    st.write(f"Question: {q}")
+    ans = st.text_input("Your answer")
+    if st.button("Check Answer"):
+        if ans.strip().lower() == a.lower():
+            st.success("Correct!")
+        else:
+            st.error(f"Wrong. Answer: {a}")
+
+# -------------------------
+# BIBLE READER
+# -------------------------
+def ui_bible():
+    st.header("📖 Bible Reader")
+    books = ["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Psalms",
+             "Proverbs","Isaiah","Matthew","Mark","Luke","John","Acts","Romans","Revelation"]
+    book = st.selectbox("Book", books)
+    chapter = st.number_input("Chapter", min_value=1, value=1)
+    verse = st.text_input("Verse or range (e.g. 3:16 or 3:16-18)")
+    if st.button("Load Chapter"):
+        display_bible_chapter(book, chapter)
+    if st.button("Get Verse"):
+        display_bible_api(book, chapter, verse)
+
+def display_bible_chapter(book, chapter):
+    url = f"https://bible-api.com/{book}+{chapter}"
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            data = r.json()
+            verses = data.get("verses", [])
+            for v in verses:
+                st.markdown(f"**{v.get('book_name')} {v.get('chapter')}:{v.get('verse')}** - {v.get('text')}")
+    except:
+        st.error("Could not fetch chapter.")
+
+def display_bible_api(book, chapter, verse_or_range):
+    url = f"https://bible-api.com/{book}+{chapter}:{verse_or_range}"
+    try:
+        r = requests.get(url)
+        if r.status_code == 200:
+            data = r.json()
+            if "verses" in data:
+                for v in data["verses"]:
+                    st.markdown(f"**{v.get('book_name')} {v.get('chapter')}:{v.get('verse')}** - {v.get('text')}")
+            elif "text" in data:
+                st.markdown(data["text"])
+    except:
+        st.error("Could not fetch verse.")
+
+# -------------------------
+# FINAL NAVIGATION
+# -------------------------
+PAGES = {
+    "Chat System": ui_chat_system,
+    "Notes": ui_notes,
+    "Schedule": ui_schedule,
+    "Study Materials": ui_study,
+    "Exam Prep": ui_exam,
+    "Bible": ui_bible
+}
+
+ui_auth()
+selection = st.sidebar.radio("Go to", list(PAGES.keys()))
+page_func = PAGES.get(selection)
+if page_func:
+    page_func()
+# -------------------------
+# STUDY MATERIALS
+# -------------------------
+def ui_study_materials():
+    st.header("📚 Study Materials")
+    subjects = {
+        "Mathematics": ["Algebra", "Geometry", "Trigonometry", "Calculus"],
+        "Biology": ["Cell Biology", "Genetics", "Ecology"],
+        "English": ["Grammar", "Comprehension", "Essay Writing"]
+    }
+    subject = st.selectbox("Select Subject", list(subjects.keys()))
+    st.subheader(f"Chapters in {subject}")
+    chapters = subjects[subject]
+    selected_chapter = st.selectbox("Select Chapter", chapters)
+    st.write(f"Now viewing: **{selected_chapter}**")
+    st.text_area("Your notes for this chapter...", height=120)
+
+# -------------------------
+# EXAM PRACTICE
+# -------------------------
+def ui_exam_prep():
+    st.header("❓ Exam Preparation")
+    questions_bank = {
+        "Math": [("7×8 = ?", "56"), ("x + 2 = 5, x = ?", "3")],
+        "Biology": [("Photosynthesis is?", "Process by which plants make food")]
+    }
+    subject = st.selectbox("Choose Subject", list(questions_bank.keys()))
+    q, a = random.choice(questions_bank[subject])
+    st.write(f"Question: {q}")
+    user_ans = st.text_input("Your answer")
+    if st.button("Check Answer"):
+        if user_ans.strip().lower() == a.lower():
+            st.success("Correct!")
+        else:
+            st.error(f"Incorrect. Correct answer: {a}")
+
+# -------------------------
+# BIBLE READER
+# -------------------------
+def ui_bible_reader():
+    st.header("📖 Bible Reader")
+    books = ["Genesis","Exodus","Leviticus","Numbers","Deuteronomy","Psalms","Proverbs",
+             "Isaiah","Matthew","Mark","Luke","John","Acts","Romans","Revelation"]
+    book = st.selectbox("Book", books)
+    chapter = st.number_input("Chapter", min_value=1, value=1)
+    verse_input = st.text_input("Verse or range (e.g., 3:16 or 3:16-18)")
+    if st.button("Load Chapter"):
+        display_bible_chapter(book, chapter)
+    if st.button("Get Verse/Range"):
+        display_bible_api(book, chapter, verse_input)
+
+def display_bible_chapter(book, chapter):
+    try:
+        url = f"https://bible-api.com/{book}+{chapter}"
+        r = requests.get(url)
+        if r.status_code == 200:
+            data = r.json()
+            verses = data.get("verses", [])
+            for v in verses:
+                st.markdown(f"**{v.get('book_name')} {v.get('chapter')}:{v.get('verse')}** - {v.get('text')}")
+        else:
+            st.error("Could not fetch chapter.")
+    except Exception as e:
+        st.error(f"Error: {e}")
+
+def display_bible_api(book, chapter, verse_or_range):
+    try:
+        url = f"https://bible-api.com/{book}+{chapter}:{verse_or_range}"
+        r = requests.get(url)
+        if r.status_code == 200:
+            data = r.json()
+            if "verses" in data:
+                for v in data["verses"]:
+                    st.markdown(f"**{v.get('book_name')} {v.get('chapter')}:{v.get('verse')}** - {v.get('text')}")
+            elif "text" in data:
+                st.markdown(data["text"])
+        else:
+            st.error("Verse not found.")
+    except Exception as e:
+        st.error(f"Error fetching verse: {e}")
+
+# -------------------------
+# FINAL NAVIGATION
+# -------------------------
+PAGES = {
+    "Chat System": ui_chat_system,  # Your chat system function
+    "Notes": ui_notes,
+    "Schedule": ui_schedule,
+    "Study Materials": ui_study_materials,
+    "Exam Prep": ui_exam_prep,
+    "Bible": ui_bible_reader
+}
+
+# Authentication sidebar
+ui_auth()
+
+st.sidebar.title("Navigate")
+selection = st.sidebar.radio("Go to", list(PAGES.keys()))
+
+# Default to Chat System if none selected
+if not selection:
+    selection = "Chat System"
+
+# Display logged-in user
+st.markdown("---")
+st.markdown(f"### Logged in: {get_my_profile().get('username') if st.session_state.get('user') else 'Not signed in'}")
+st.markdown("---")
+
+# Run selected page
+page_func = PAGES.get(selection)
+if page_func:
+    page_func()
+else:
+    st.info("Select a page from the sidebar.")
