@@ -234,7 +234,7 @@ class ShoppingCart {
         message += `Hello! I would like to place an order:\n\n`;
         
         this.items.forEach((item, index) => {
-            message += `*${index + 1}. ${item.name}*\n`;
+            message += `${index + 1}. ${item.name}\n`;
             message += `   Quantity: ${item.quantity}\n`;
             message += `   Price: ₦${this.formatPrice(item.price)} each\n`;
             message += `   Subtotal: ₦${this.formatPrice(item.price * item.quantity)}\n\n`;
@@ -662,3 +662,146 @@ function filterProductsInSection(searchTerm, sectionId) {
         }
     });
 }
+// Enhanced Lands Section Functionality
+function initLandsSection() {
+    // WhatsApp contact
+    document.querySelectorAll('.land-card .whatsapp-contact').forEach(button => {
+        button.addEventListener('click', function() {
+            const productName = this.dataset.product;
+            const landCard = this.closest('.land-card');
+            const landPrice = landCard.querySelector('.land-price').textContent;
+            const landLocation = landCard.querySelector('.land-location span').textContent;
+            const landDescription = landCard.querySelector('.land-description').textContent;
+            
+            const message = `PROPERTY INQUIRY - PETROSINI GLOBAL \n\nI'm interested in this property:\n\n• ${productName}\n• ${landPrice}\n• ${landLocation}\n• ${landDescription}\n\nPlease provide me with:\n✓ More details about the property\n✓ Available payment plans\n✓ Location specifics\n✓ Any available photos\n\nThank you!`;
+            
+            const encodedMessage = encodeURIComponent(message);
+            const phoneNumber = "2348144277047";
+            const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+            
+            window.open(whatsappURL, '_blank');
+        });
+    });
+
+    // Lands search functionality
+    const landsSearch = document.getElementById('landsSearch');
+    if (landsSearch) {
+        landsSearch.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const landCards = document.querySelectorAll('.land-card');
+            
+            landCards.forEach(card => {
+                const title = card.querySelector('.land-title').textContent.toLowerCase();
+                const location = card.querySelector('.land-location span').textContent.toLowerCase();
+                const description = card.querySelector('.land-description').textContent.toLowerCase();
+                
+                if (title.includes(searchTerm) || location.includes(searchTerm) || description.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        });
+    }
+}
+
+// Initialize when DOM loads
+document.addEventListener('DOMContentLoaded', function() {
+    initLandsSection();
+});
+
+// Tablet Dropdown Functionality Only
+function initTabletDropdowns() {
+    const dropdowns = document.querySelectorAll('.dropdown');
+    
+    dropdowns.forEach(dropdown => {
+        const dropdownLink = dropdown.querySelector('a');
+        
+        dropdownLink.addEventListener('click', function(e) {
+            // Only apply click behavior on tablet (769px - 1024px)
+            if (window.innerWidth >= 769 && window.innerWidth <= 1024) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                // Close other open dropdowns
+                dropdowns.forEach(otherDropdown => {
+                    if (otherDropdown !== dropdown && otherDropdown.classList.contains('active')) {
+                        otherDropdown.classList.remove('active');
+                    }
+                });
+                
+                // Toggle current dropdown
+                dropdown.classList.toggle('active');
+            }
+        });
+    });
+    
+    // Close dropdowns when clicking outside (tablet only)
+    document.addEventListener('click', function(e) {
+        if (window.innerWidth >= 769 && window.innerWidth <= 1024) {
+            if (!e.target.closest('.dropdown')) {
+                dropdowns.forEach(dropdown => {
+                    dropdown.classList.remove('active');
+                });
+            }
+        }
+    });
+    
+    // Close dropdowns when switching from tablet to desktop
+    window.addEventListener('resize', function() {
+        if (window.innerWidth > 1024) {
+            dropdowns.forEach(dropdown => {
+                dropdown.classList.remove('active');
+            });
+        }
+    });
+}
+
+// Update your existing DOMContentLoaded function - just add this one line:
+document.addEventListener('DOMContentLoaded', function() {
+    // ... your existing initialization code ...
+    
+    // Initialize tablet dropdowns
+    initTabletDropdowns();
+    
+    // ... rest of your code ...
+});
+// Reviews & Suggestions Functionality
+function initReviewsSection() {
+    // WhatsApp review buttons
+    document.querySelectorAll('.whatsapp-review').forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewType = this.dataset.type;
+            
+            let message = '';
+            
+            switch(reviewType) {
+                case 'Quick Feedback':
+                    message = `QUICK FEEDBACK - PETROSINI GLOBAL \n\nHello! I'd like to share my feedback:\n\n[Please share your experience with us]\n\nOverall, I would rate my experience: \n\nThank you!`;
+                    break;
+                    
+                case 'Suggestion':
+                    message = `SUGGESTION - PETROSINI GLOBAL \n\nHello! I have a suggestion to help improve your services:\n\n[Please share your suggestion here]\n\nI believe this would enhance the customer experience.\n\nThank you for listening!`;
+                    break;
+                    
+                case 'Product Review':
+                    message = `PRODUCT REVIEW - PETROSINI GLOBAL \n\nHello! I'd like to review a product I purchased:\n\nProduct: [Product Name]\n\nRating: \n\nReview: [Please share your experience with the product]\n\nWhat I loved:\n• \n• \n• \n \n• \n\nThank you!`;
+                    break;
+                    
+                case 'Service Feedback':
+                    message = `SERVICE FEEDBACK - PETROSINI GLOBAL \n\nHello! Here's my feedback on your service:\n\nService Experience Rating: \n\nWhat I appreciated:\n• \n• \n• \n\nSuggestions for improvement:\n• \n• \n\nOverall, the service was: [Excellent/Good/Satisfactory]\n\nThank you!`;
+                    break;
+            }
+            
+            const encodedMessage = encodeURIComponent(message);
+            const phoneNumber = "2348144277047";
+            const whatsappURL = `https://wa.me/${phoneNumber}?text=${encodedMessage}`;
+            
+            window.open(whatsappURL, '_blank');
+        });
+    });
+}
+
+// Don't forget to call this function in your DOMContentLoaded:
+// Add this line to your existing DOMContentLoaded function
+initReviewsSection();

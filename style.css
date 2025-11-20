@@ -1743,7 +1743,7 @@ img {
 }
 
 .whatsapp-checkout:hover {
-    background: #128C7E;
+    background: #15371e;
     transform: translateY(-2px);
 }
 
@@ -2002,5 +2002,525 @@ img {
         height: auto !important;
         display: block !important;
         margin: 0 auto !important;
+    }
+}
+/* Enhanced Lands & Real Estate Section - No Images */
+.land-card {
+    background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+    border-radius: 16px;
+    padding: 25px;
+    border: 2px solid #e8f5e8;
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.land-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, var(--primary), var(--secondary));
+}
+
+.land-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px rgba(30, 78, 40, 0.15);
+    border-color: var(--primary);
+}
+
+.land-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.land-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.land-type-residential .land-icon {
+    background: linear-gradient(135deg, #1E4E28 0%, #2d6b3f 100%);
+}
+
+.land-type-commercial .land-icon {
+    background: linear-gradient(135deg, #BB062D 0%, #d32f2f 100%);
+}
+
+.land-type-duplex .land-icon {
+    background: linear-gradient(135deg, #1976d2 0%, #42a5f5 100%);
+}
+
+.land-badge {
+    background: var(--secondary);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.land-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.land-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 10px;
+    line-height: 1.3;
+}
+
+.land-description {
+    color: var(--gray);
+    margin-bottom: 20px;
+    line-height: 1.5;
+    flex: 1;
+}
+
+.land-features {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+.land-feature {
+    background: rgba(30, 78, 40, 0.1);
+    color: var(--primary);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.land-feature i {
+    font-size: 0.7rem;
+}
+
+.land-price-section {
+    border-top: 1px solid #e8f5e8;
+    padding-top: 20px;
+    margin-top: auto;
+}
+
+.land-price {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 5px;
+}
+
+.land-price-note {
+    font-size: 0.8rem;
+    color: var(--gray);
+    margin-bottom: 15px;
+}
+
+.land-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Updated: Single WhatsApp button only */
+.btn-land-primary {
+    width: 100%;
+    background: var(--primary);
+    color: white;
+    border: none;
+    padding: 14px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-size: 1rem;
+}
+
+.btn-land-primary:hover {
+    background: #15371e;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(30, 78, 40, 0.3);
+}
+
+/* Location Pin Animation */
+.land-location {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--gray);
+    font-size: 0.9rem;
+    margin-bottom: 15px;
+}
+
+.land-location i {
+    color: var(--secondary);
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Status Indicator */
+.land-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-bottom: 10px;
+}
+
+.status-available {
+    background: #e8f5e8;
+    color: var(--primary);
+}
+
+.status-featured {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+/* Enhanced Mobile Responsiveness for Lands */
+@media (max-width: 768px) {
+    .land-card {
+        padding: 20px;
+    }
+    
+    .land-header {
+        flex-direction: column;
+        gap: 15px;
+        align-items: flex-start;
+    }
+    
+    .land-badge {
+        align-self: flex-start;
+    }
+    
+    .land-title {
+        font-size: 1.2rem;
+    }
+    
+    .land-price {
+        font-size: 1.5rem;
+    }
+    
+    .land-actions {
+        flex-direction: column;
+    }
+    
+    .btn-land-primary {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .land-card {
+        padding: 15px;
+    }
+    
+    .land-features {
+        gap: 8px;
+    }
+    
+    .land-feature {
+        font-size: 0.75rem;
+        padding: 4px 10px;
+    }
+    
+    .btn-land-primary {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+}
+
+/* Tablet Dropdown Fix Only (768px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .dropdown {
+        position: relative;
+    }
+    
+    .dropdown > a {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+    }
+    
+    .dropdown-menu {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background-color: var(--white);
+        box-shadow: var(--shadow);
+        border-radius: 4px;
+        padding: 10px 0;
+        min-width: 200px;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(10px);
+        transition: var(--transition);
+        z-index: 1001;
+        max-height: 0;
+        overflow: hidden;
+    }
+    
+    .dropdown.active .dropdown-menu {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        max-height: 300px;
+    }
+    
+    .dropdown-menu li {
+        padding: 8px 20px;
+    }
+    
+    .dropdown-menu li:hover {
+        background-color: var(--light);
+    }
+    
+    /* Chevron animation */
+    .dropdown > a .fa-chevron-down {
+        transition: transform 0.3s ease;
+        margin-left: 5px;
+    }
+    
+    .dropdown.active > a .fa-chevron-down {
+        transform: rotate(180deg);
+    }
+}
+
+/* Reviews & Suggestions Section - Matching Existing Style */
+.reviews-section {
+    background: white;
+}
+
+.reviews-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.reviews-header h2 {
+    font-size: 2.5rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.reviews-header p {
+    font-size: 1.1rem;
+    color: var(--gray);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+/* Reviews & Suggestions Section - Matching Contact Method Cards */
+.reviews-section {
+    background-color: var(--white);
+}
+
+.reviews-header {
+    text-align: center;
+    margin-bottom: 50px;
+}
+
+.reviews-header h2 {
+    font-size: 2.5rem;
+    color: var(--primary);
+    margin-bottom: 1rem;
+}
+
+.reviews-header p {
+    font-size: 1.1rem;
+    color: var(--gray);
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.6;
+}
+
+.reviews-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+/* EXACTLY LIKE YOUR CONTACT METHOD CARDS */
+.review-card {
+    background: var(--white);
+    padding: 40px 30px;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+}
+
+.review-card:hover {
+    transform: translateY(-5px);
+}
+
+.review-icon {
+    font-size: 3rem;
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+}
+
+.review-card h3 {
+    margin-bottom: 1rem;
+    color: var(--primary);
+}
+
+.review-card p {
+    color: var(--gray);
+    margin-bottom: 2rem;
+    line-height: 1.6;
+}
+
+.btn-review {
+    background-color: var(--primary);
+    color: var(--white);
+    border: none;
+    padding: 12px 24px;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin: 0 auto;
+}
+
+.btn-review:hover {
+    background-color: #15371e;
+    transform: translateY(-2px);
+}
+
+/* Testimonials Section */
+.testimonials-section {
+    margin-top: 40px;
+}
+
+.testimonials-title {
+    text-align: center;
+    font-size: 2rem;
+    color: var(--primary);
+    margin-bottom: 40px;
+    font-weight: 700;
+}
+
+.testimonials-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 30px;
+}
+
+.testimonial-card {
+    background-color: var(--white);
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    transition: var(--transition);
+    border-left: 4px solid var(--primary);
+}
+
+.testimonial-card:hover {
+    transform: translateY(-5px);
+}
+
+.testimonial-content {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.stars {
+    margin-bottom: 15px;
+    color: #ffc107;
+}
+
+.stars i {
+    margin-right: 2px;
+}
+
+.testimonial-content p {
+    color: var(--gray);
+    line-height: 1.6;
+    margin-bottom: 20px;
+    flex: 1;
+    font-style: italic;
+}
+
+.customer-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.customer-info strong {
+    color: var(--primary);
+    font-size: 1rem;
+}
+
+.customer-info span {
+    color: var(--gray);
+    font-size: 0.9rem;
+}
+
+/* Responsive Design for Reviews */
+@media (max-width: 768px) {
+    .reviews-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .testimonials-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+    
+    .reviews-header h2 {
+        font-size: 2rem;
+    }
+    
+    .testimonials-title {
+        font-size: 1.6rem;
     }
 }
