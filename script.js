@@ -182,31 +182,40 @@ class ShoppingCart {
         const animation = document.createElement('div');
         animation.innerHTML = '<i class="fas fa-check"></i> Added to Cart!';
         animation.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: var(--primary);
-            color: white;
-            padding: 12px 20px;
-            border-radius: 4px;
-            z-index: 10000;
-            box-shadow: var(--shadow);
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-weight: 600;
-        `;
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--primary);
+  color: white;
+  padding: 10px 16px;
+  border-radius: 30px;
+  z-index: 10000;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  opacity: 0;
+  transition: all 0.3s ease;
+`;
 
         document.body.appendChild(animation);
+// Animate IN
+setTimeout(() => {
+  animation.style.opacity = '1';
+  animation.style.transform = 'translateX(-50%) translateY(0)';
+}, 50);
 
         // Remove animation after 2 seconds
         setTimeout(() => {
-            animation.style.opacity = '0';
-            animation.style.transform = 'translateX(100px)';
+  animation.style.opacity = '0';
+  animation.style.transform = 'translateX(-50%) translateY(40px)';
             setTimeout(() => {
                 document.body.removeChild(animation);
             }, 300);
-        }, 2000);
+        }, 1500);
     }
 
     checkoutViaWhatsApp() {
@@ -805,3 +814,28 @@ function initReviewsSection() {
 // Don't forget to call this function in your DOMContentLoaded:
 // Add this line to your existing DOMContentLoaded function
 initReviewsSection();
+document.addEventListener('DOMContentLoaded', () => {
+  const buttons = document.querySelectorAll('.filter-btn');
+  const sections = {
+    appliances: document.getElementById('appliances'),
+    generators: document.getElementById('generators'),
+    'real-estate': document.getElementById('real-estate')
+  };
+
+  buttons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      buttons.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const target = btn.dataset.target;
+
+      Object.keys(sections).forEach(key => {
+        if (target === 'all' || target === key) {
+          sections[key].style.display = '';
+        } else {
+          sections[key].style.display = 'none';
+        }
+      });
+    });
+  });
+});
